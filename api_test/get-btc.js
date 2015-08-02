@@ -41,6 +41,30 @@ var post = function (url, dataString) {
   //return Q.nfcall(request, param);
 };
 
+// Open a websocket to wait for confirmation that a transaction has been accepted in a block.
+function waitForTxHash(txHash) {
+ var deferred = Q.defer();
+
+  var ws = new WebSocket("wss://socket.blockcypher.com/v1/btc/test3");
+
+  // We keep pinging on a timer to keep the websocket alive
+  var ping = pinger(ws);
+
+  ws.onmessage = function (event) {
+    if (JSON.parse(event.data).confirmations > 0) {
+      log("Transaction confirmed.");
+      deferred.resolve()
+      ping.stop();
+      ws.close();
+    }
+  }
+  ws.onopen = function(event) {
+    ws.send(JSON.stringify({filter: "event=new-block-tx&hash="+txHash}));
+  }
+  log("Waiting for confirmation... (may take > 10 min):" + txHash);
+  return deferred.promise;
+}
+
 
 // 0. We get a newly generated address
 function logAddr(addr) {
@@ -53,7 +77,7 @@ function logAddr(addr) {
 function newTransaction() {
   var newtx = {
     "inputs": [{"addresses": [source.address]}],
-    "outputs": [{"addresses": [dest.address], "value": 12000}]
+    "outputs": [{"addresses": [dest.address], "value": 25000}]
   }
   return post(rootUrl+"/txs/new", JSON.stringify(newtx));
 }
@@ -71,33 +95,17 @@ function signAndSend(newtx) {
   return post(rootUrl+"/txs/send", JSON.stringify(newtx));
 }
 
+
 // 3. Open a websocket to wait for confirmation the transaction has been accepted in a block.
 function waitForConfirmation(finaltx) {
   if (checkError(finaltx)) return;
-  var deferred = Q.defer();
-
   log("Transaction " + finaltx.tx.hash + " to " + dest.address + " of " +
         finaltx.tx.outputs[0].value/100000000 + " BTC sent.");
 
-  var ws = new WebSocket("wss://socket.blockcypher.com/v1/btc/test3");
-
-  // We keep pinging on a timer to keep the websocket alive
-  var ping = pinger(ws);
-
-  ws.onmessage = function (event) {
-    if (JSON.parse(event.data).confirmations > 0) {
-      log("Transaction confirmed.");
-      deferred.resolve()
-      ping.stop();
-      ws.close();
-    }
-  }
-  ws.onopen = function(event) {
-    ws.send(JSON.stringify({filter: "event=new-block-tx&hash="+finaltx.tx.hash}));
-  }
-  log("Waiting for confirmation... (may take > 10 min)");
-  return deferred.promise;
+  var hash = finaltx.tx.hash;
+  return waitForTxHash(hash);
 }
+ 
 
 function checkError(msg) {
   if (msg.errors && msg.errors.length) {
@@ -136,4 +144,7 @@ function getSomeBTC(address) {
   .then(waitForConfirmation)
 }
 
-module.exports = getSomeBTC
+module.exports = {
+  getSomeBTC: getSomeBTC,
+  waitForTxHash: waitForTxHash
+}

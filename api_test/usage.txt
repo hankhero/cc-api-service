@@ -14,7 +14,7 @@ You need to send testnet coins (e.g. from a faucet http://tpfaucet.appspot.com/ 
 
 After coins are received, you can run the test:
 
-    $ node test.js ABCDefgh run
+    $ node test.js ABCDefgh issue
 
 The run will generate 4 addresses, issue new coins and transfer them using API.
 
@@ -29,5 +29,5 @@ Parameters:
 
   --seed= optional way to specify the seed
   
-  --command = optional way to specify the command ('show' or 'run')
+  --command = optional way to specify the command ('show' or 'issue')
   
