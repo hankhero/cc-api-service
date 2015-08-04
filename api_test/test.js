@@ -21,6 +21,7 @@ var issue_tx = args.issue_tx; //For transfer
 var address_key_map
 
 
+
 function genkey(i) {
   var d = BigInteger.fromBuffer(bitcoin.crypto.sha256(seed + i.toString()))
   var k = new bitcoin.ECKey(d)
@@ -109,7 +110,7 @@ var issue = function () {
 
     console.log('Now broadcasting the transaction')
 
-    var issue_tx = bitcoin.Transaction.fromHex(tx.toHex()).getId();
+    issue_tx = bitcoin.Transaction.fromHex(tx.toHex()).getId();
 
     console.log("issue_tx", issue_tx)
 
@@ -134,6 +135,12 @@ var issue = function () {
 
 var transfer = function () {
   //Assumes we have issued
+
+  if (! issue_tx) {
+    console.log("Specify previous issuance transacion with --issue_tx=previously-printed-transaction-id")
+    exit(0)
+  }
+    
   var previousChange = getaddress(1)
   var previouslyIssuedColorAddr = getaddress(2)
   var issuanceTransaction = issue_tx
@@ -192,7 +199,8 @@ var transfer = function () {
     var tx = txb.build()
 
     console.log('Transaction builder created transaction:')
-    console.log(tx.toHex())
+    console.log(bitcoin.Transaction.fromHex(tx.toHex()).getId());
+    console.log(tx.getId && tx.getId)
 
     console.log('Now broadcasting the transaction')
     api_call('broadcastTx', {tx: tx.toHex() }, function (err, res) {
@@ -226,13 +234,12 @@ function autotest () {
              return getbtc.getSomeBTC(getaddress(0))
            }
          })
-         .delay(3000)
+         .delay(60000)
          .then(issue)
-         .delay(3000)
          .then(function () {
            return getbtc.waitForTxHash(issue_tx)
          })
-         .delay(3000)
+         .delay(60000)
          .then(transfer)
 }
 

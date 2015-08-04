@@ -51,7 +51,7 @@ function waitForTxHash(txHash) {
   var ping = pinger(ws);
 
   ws.onmessage = function (event) {
-    if (JSON.parse(event.data).confirmations > 0) {
+    if (JSON.parse(event.data).confirmations >= 1) {
       log("Transaction confirmed.");
       deferred.resolve()
       ping.stop();
@@ -59,9 +59,9 @@ function waitForTxHash(txHash) {
     }
   }
   ws.onopen = function(event) {
-    ws.send(JSON.stringify({filter: "event=new-block-tx&hash="+txHash}));
+    ws.send(JSON.stringify({filter: "event=new-block-tx&hash=" + txHash}));
   }
-  log("Waiting for confirmation... (may take > 10 min):" + txHash);
+  log("Waiting for confirmation... (may take > 10 min) of tx: " + txHash);
   return deferred.promise;
 }
 
